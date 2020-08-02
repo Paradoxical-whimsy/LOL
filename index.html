@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LOL英雄</title>
+    <script src="./js/vue.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./js/vuex.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./js/vue-router.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./js/axios.min.js" type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" type="text/css" href="./css/main.css"/>
+  </head>
+  <body>
+    <div id="app">
+      <top></top>
+      <router-view></router-view>
+    </div>
+    <script type="module">
+      let top = Vue.component('top', {
+        template: `
+          <div id="top">
+            <div id="container">
+              <img src="./img/home.png" @click="home"/>
+              <div id="history" v-show="this.$store.state.history.length > 0">
+                <span>浏览历史：</span>
+                <div id="icons">
+                  <img class="h_icon" :src="img_url(idx)" v-for="idx in this.$store.state.history"/>
+                </div>
+              </div>
+            </div>
+          </div>`,
+        methods: {
+          home() {
+            this.$router.push({
+              name: 'home'
+            });
+          },
+          img_url(idx) {
+            return `https://game.gtimg.cn/images/lol/act/img/champion/${this.$store.state.heros[idx].alias}.png`;
+          }
+        }
+      });
+      
+      let home = Vue.component('home', {
+        data() {
+          return {
+            types: this.$store.state.types,
+            cur_type: 'all'
+          }
+        },
+        template: `
+          <div id="home">
+            <span v-for="(en_type, ch_type) in types" class="type">
+              <input type="radio" name="type" :value="ch_type" :checked="ch_type === 'all'" @click="change_type"/>{{en_type}}
+            </span>
+            <ul class="heros">
+              <li class="hero" v-for="(hero, idx) in heros" v-show="cur_type === 'all' || hero.roles.includes(cur_type)">
+                <a class="link" @click="check_detail(idx)">
+                  <img class="icon" :src="img_url(hero.alias)">
+                  <div class="title">{{hero.name}}</div>
+                </a>
+              </li>
+            </ul>
+          </div>`,
+        computed: {
+          heros() {
+            return this.$store.state.heros;
+          }
+        },
+        methods: {
+          change_type(e) {
+            this.cur_type = e.target.value;
+          },
+          check_detail(idx) {
+            if (this.$store.state.history.length < 3) {
+              this.$store.state.history.push(idx);
+            } else {
+              this.$store.state.history.shift(idx);
+              this.$store.state.history.push(idx);
+            }
+            this.$router.push({
+              name: 'hero_detail',
+              params: {
+                idx
+              }
+            });
+          },
+          img_url(alias) {
+            return `https://game.gtimg.cn/images/lol/act/img/champion/${alias}.png`;
+          }
+        }
+      });
+      
+      let hero_detail = Vue.component('hero_detail', {
+        data() {
+          let hero = this.$store.state.heros[this.$route.params.idx];
+          return {
+            cur_hero: 0,
+            hero,
+            types: this.$store.state.types,
+            details: [
+              {
+                text: '物理攻击',
+                color: 'red',
+                num: hero.attack
+              },
+              {
+                text: '魔法攻击',
+                color: 'orange',
+                num: hero.magic
+              },
+              {
+                text: '防御能力',
+                color: 'yellow',
+                num: hero.defense
+              },
+              {
+                text: '上手难度',
+                color: 'green',
+                num: hero.difficulty
+              }
+            ]
+          }
+        },
+        template: `
+          <div id="hero_detail">
+            <div id="bg">
+              <div id="cover">
+                <div id="name">{{hero.name}}</div>
+                <div id="title">{{hero.title}}</div>
+                <div>
+                  <span class="roles" v-for="role in hero.roles">{{types[role]}}</span>
+                </div>
+                <div class="detail" v-for="detail in details">
+                  <span class="text">{{detail.text}}</span>
+                  <span class="bar">
+                    <span class="color" :style="{width: String(detail.num * 10) + 'px', background: detail.color}" :title="detail.num"></span>
+                  </span>
+                </div>
+              </div>
+              <div id="img" :style="img_url(hero.heroId)"></div>
+            </div>
+          </div>`,
+        methods: {
+          img_url(id) {
+            return `background: url('https://game.gtimg.cn/images/lol/act/img/skin/big${id}000.jpg')`;
+          }
+        },
+        beforeRouteEnter(to, from, next) {
+          to.params.idx >= 0 ? next() : next('home');
+        }
+      });
+      
+      Vue.use(Vuex);
+      const store = new Vuex.Store({
+        state: {
+          heros: [],
+          types: {
+            'all': '全部英雄',
+            'fighter': '战士',
+            'mage': '法师',
+            'assassin': '刺客',
+            'tank': '坦克',
+            'marksman': '射手',
+            'support': '辅助'
+          },
+          history: []
+        },
+        mutations: {
+          set_data(state) {
+            axios.get('https://game.gtimg.cn/images/lol/act/img/js/heroList/hero_list.js')
+              .then((res) => state.heros = res.data.hero)
+              .catch((err) => console.log(err));
+          }
+        }
+      });
+      store.commit('set_data');
+      
+      const router = new VueRouter({
+        routes: [{
+            path: '/home',
+            name: 'home',
+            component: home
+          },
+          {
+            path: '/hero_detail',
+            name: 'hero_detail',
+            component: hero_detail
+          }
+        ]
+      });
+      
+      new Vue({
+        el: '#app',
+        component: {
+          top
+        },
+        store,
+        router,
+        mounted() {
+          if (this.$route.name !== 'home') {
+            this.$router.push('home');
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
