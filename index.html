@@ -7,6 +7,8 @@
     <script src="./js/vuex.js" type="text/javascript" charset="utf-8"></script>
     <script src="./js/vue-router.js" type="text/javascript" charset="utf-8"></script>
     <script src="./js/axios.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
     <link rel="stylesheet" type="text/css" href="./css/main.css"/>
   </head>
   <body>
@@ -19,7 +21,7 @@
         template: `
           <div id="top">
             <div id="container">
-              <img src="./img/home.png" @click="home"/>
+              <el-button id="home-btn" @click="home">主页</el-button>
               <div id="history" v-show="this.$store.state.history.length > 0">
                 <span>浏览历史：</span>
                 <div id="icons">
@@ -30,9 +32,12 @@
           </div>`,
         methods: {
           home() {
-            this.$router.push({
-              name: 'home'
-            });
+            if (this.$route.name !== 'home') {
+              this.$router.push('home');
+            }
+            // this.$router.push({
+            //   name: 'home'
+            // });
           },
           img_url(idx) {
             return `https://game.gtimg.cn/images/lol/act/img/champion/${this.$store.state.heros[idx].alias}.png`;
@@ -89,7 +94,6 @@
           }
         }
       });
-      
       let hero_detail = Vue.component('hero_detail', {
         data() {
           let hero = this.$store.state.heros[this.$route.params.idx];
